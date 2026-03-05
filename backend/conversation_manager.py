@@ -1,3 +1,5 @@
+import os
+import pandas as pd
 from model_engine import stream_response
 from session_store import get_session
 
@@ -65,3 +67,17 @@ async def handle_message(session_id, user_message):
         "role": "assistant",
         "content": full_response
     })
+
+    if "confirm" in user_message.lower() or "yes" in user_message.lower():
+        export_order(session["order_state"])
+
+
+def export_order(order_state):
+    if not order_state:
+        return
+    filepath = "orders.xlsx"
+    df = pd.DataFrame([order_state])
+    if os.path.exists(filepath):
+        existing = pd.read_excel(filepath)
+        df = pd.concat([existing, df], ignore_index=True)
+    df.to_excel(filepath, index=False)
