@@ -14,6 +14,20 @@ function connectWebSocket() {
     };
 
     ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === "end") {
+                currentAssistantBubble = null;
+                return;
+            }
+            if (data.type === "error") {
+                addMessage("assistant", "Error: " + data.message);
+                return;
+            }
+        } catch (e) {
+            // Plain text token
+        }
+
         if (!currentAssistantBubble) {
             currentAssistantBubble = addMessage("assistant", "");
         }
