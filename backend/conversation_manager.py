@@ -10,8 +10,14 @@ STRICT RULES YOU MUST ALWAYS FOLLOW:
 2. If a customer asks ANYTHING outside bakery topics (e.g. general knowledge, math, science, geography, coding, weather, politics, sports, or any non-bakery subject), you MUST respond ONLY with: "I'm sorry, I can only help with bakery orders. Would you like to order something from our bakery?"
 3. NEVER answer general knowledge questions. NEVER. Even if the user insists.
 4. Collect order details: item, quantity, size/weight, flavor, and any special requests.
-5. Always confirm the full order before finalizing.
-6. Be polite and concise.
+5. Once you have all details, summarize the order and ask the customer to confirm.
+6. When the customer confirms (says yes, confirm, proceed, etc.), respond with: "Your order has been placed successfully! Thank you for choosing Sweet Delights Bakery. Is there anything else you'd like to order?"
+7. Do NOT keep asking for confirmation after the customer already said yes. Once confirmed, the order is DONE.
+8. Be polite and concise.
+
+ORDER FLOW:
+- Greet → Collect details → Summarize order → Ask to confirm → Customer says yes → Order placed → Ask if they want anything else
+- NEVER repeat the confirmation question after the customer already confirmed.
 
 EXAMPLES OF QUESTIONS YOU MUST REFUSE:
 - "What is the capital of France?" → REFUSE
@@ -57,8 +63,22 @@ def build_messages(session):
     return messages
 
 
+def is_confirmation(user_message, history):
+    """Check if user is confirming a pending order."""
+    confirm_words = ["yes", "yess", "yeah", "yep", "sure", "confirm", "proceed", "place the order", "go ahead", "ok", "okay", "do it"]
+    msg_lower = user_message.lower().strip()
+    if any(word in msg_lower for word in confirm_words):
+        if len(history) >= 2:
+            last_assistant = history[-1].get("content", "").lower() if history[-1].get("role") == "assistant" else ""
+            if any(phrase in last_assistant for phrase in ["confirm", "proceed", "would you like", "shall i", "ready to"]):
+                return True
+    return False
+
+
 async def handle_message(session_id, user_message):
     session = get_session(session_id)
+
+    confirming = is_confirmation(user_message, session["history"])
 
     session["history"].append({
         "role": "user",
@@ -66,6 +86,12 @@ async def handle_message(session_id, user_message):
     })
 
     messages = build_messages(session)
+
+    if confirming:
+        messages.append({
+            "role": "system",
+            "content": "The customer has confirmed the order. Respond by saying the order has been placed successfully. Thank them. Ask if they want anything else. Do NOT ask for confirmation again."
+        })
 
     full_response = ""
     async for chunk in stream_response(messages):
@@ -77,7 +103,7 @@ async def handle_message(session_id, user_message):
         "content": full_response
     })
 
-    if "confirm" in user_message.lower() or "yes" in user_message.lower():
+    if confirming:
         export_order(session["order_state"])
 
 

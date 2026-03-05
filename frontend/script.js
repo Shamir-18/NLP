@@ -16,11 +16,11 @@ function connectWebSocket() {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            if (data.type === "end") {
+            if (typeof data === "object" && data !== null && data.type === "end") {
                 currentAssistantBubble = null;
                 return;
             }
-            if (data.type === "error") {
+            if (typeof data === "object" && data !== null && data.type === "error") {
                 addMessage("assistant", "Error: " + data.message);
                 return;
             }
